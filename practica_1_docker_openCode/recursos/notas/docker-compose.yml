@@ -1,0 +1,32 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      REDIS_HOST: cache
+      REDIS_PORT: "6379"
+      # app.py solo lee REDIS_URL; se deriva del host/puerto de arriba
+      REDIS_URL: redis://cache:6379
+      CLAVE_ADMIN: ${CLAVE_ADMIN:-admin1234}
+    depends_on:
+      cache:
+        condition: service_healthy
+    restart: unless-stopped
+
+  cache:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - datos-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    # Sin `ports`: solo accesible desde la red interna de Compose
+
+volumes:
+  datos-redis:
